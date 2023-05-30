@@ -1,0 +1,146 @@
+---
+title: "Drone Sentiment Analysis"
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+```{r}
+
+# Basic
+library(tidyverse)
+library(scales)
+library(stringr)
+
+# For cleaning / filtering text
+library(wordcloud)
+library(tm)
+library(janeaustenr)
+
+# For rendering
+library(rmarkdown)
+library(stringr)
+
+```
+
+```{r}
+#| label: filtering
+
+data1 <- read_csv("data/data1.csv")
+ 
+# The number of total responses
+pre_length = nrow(data1)
+
+# Filtering invalid responses
+response <- data1 |>
+  select(Q6, Q8) |>
+  drop_na() 
+
+
+q6_corpus <- VCorpus(
+  VectorSource(
+    as.vector(response$Q6))
+  )
+
+q6_corpus <- q6_corpus |>
+  tm_map(removeNumbers) |>
+  tm_map(removePunctuation) |>
+  tm_map(stripWhitespace) 
+  
+q6_corpus <- tm_map(q6_corpus, content_transformer(tolower)) 
+q6_corpus <- tm_map(q6_corpus, removeWords, stopwords("english"))
+
+q6_corpus
+
+
+# The number of real responses
+post_length = nrow(response)
+yield = round(((post_length / pre_length) * 100), 3)
+
+
+
+response
+```
+
+The data has `r pre_length` responses. The percentage of non-blank responses is `r yield` %
+
+```{r}
+#| label: q6-wordcloud
+
+# Creating word frequency matrix
+
+dtm <- TermDocumentMatrix(q6_corpus) 
+matrix <- as.matrix(dtm) 
+words <- sort(rowSums(matrix),decreasing=TRUE) 
+wfm <- data.frame(word = names(words),freq=words)
+
+#wfm
+
+# Creating word cloud
+
+set.seed(1234) 
+
+wordcloud(words = wfm$word, 
+          freq = wfm$freq, 
+          min.freq = 1,           
+          max.words=200, 
+          random.order=FALSE, 
+          rot.per=0.35,            
+          colors=brewer.pal(8, "Dark2"))
+
+
+
+
+
+```
+
+Pending Sarah's feedback, here's what I'd like you to do this week to close out this task:
+
+     - First, send me an image of the WordCloud for word frequency; I cannot view it presently.
+
+     - Second, complete positive and negative sentiment on drone exports, and by country.
+
+     - Third, build a table or figure that presents key findings by support, positive and negative sentiment, and by country. For example, columns could be the dv - support, +/- sentiment, country - and rows could be word associations at prescribed corlimits. BTW, why did you choose the corlimits you did?
+
+     - Fourth, write two paragraphs, one on the sentiment analysis method and one on the key findings, integrating results by support, positive and negative sentiment, and by country. 
+
+```{r}
+#| label: sentiment
+
+# http://www.sthda.com/english/wiki/text-mining-and-word-cloud-fundamentals-in-r-5-simple-steps-you-should-know
+
+# https://uc-r.github.io/sentiment_analysis
+
+#wfm
+
+# TODO:
+
+# Wordcloud by support
+# q8 To what extent do you agree that U.S. officials have a moral obligation to sell U.S.-manufactured drones to allies and partners?
+
+
+
+
+# Words associated with "Ukraine"
+findAssocs(dtm, terms = "ukraine", corlimit = 0.18)
+
+# Words associaed with "support"
+findAssocs(dtm, terms = "support", corlimit = 0.14)
+
+# Words associaed with "drone"
+findAssocs(dtm, terms = "drone", corlimit = 0.2)
+
+# Words associaed with "innocent"
+findAssocs(dtm, terms = "innocent", corlimit = 0.5)
+
+
+
+
+
+
+# The goal is to find out WHY people support certain viewpoints.
+# what are they motivated by -> what emotions does their text exhibit 
+# -> use emotion sentiment analysis library...? alternatives? need time.
+
+```
