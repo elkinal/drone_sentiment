@@ -32,35 +32,64 @@ data1 <- read_csv("data/data1.csv")
 # The number of total responses
 pre_length = nrow(data1)
 
-# Filtering invalid responses
+# Filtering and cleaning
 response <- data1 |>
   select(Q6, Q8) |>
+  rename(
+    reason = Q6,
+    opinion = Q8
+  )|>
+  mutate(opinion = gsub("(\n|<br />)"," ",opinion)) |>
   drop_na() 
 
+# Removing first 2 rows
+response = response[-c(1, 2),]
 
-q6_corpus <- VCorpus(
-  VectorSource(
-    as.vector(response$Q6))
-  )
+# Reformatting opinion column
+response$opinion = as.numeric(response$opinion)
 
-q6_corpus <- q6_corpus |>
-  tm_map(removeNumbers) |>
-  tm_map(removePunctuation) |>
-  tm_map(stripWhitespace) 
+# Function turns a column into a corpus
+create_corpus <- function(column) {
   
-q6_corpus <- tm_map(q6_corpus, content_transformer(tolower)) 
-q6_corpus <- tm_map(q6_corpus, removeWords, stopwords("english"))
+  # Creating Corpus for ALL RAW REASONS
+  corpus <- VCorpus(
+    VectorSource(
+      as.vector(column))
+    )
+  
+  corpus <- corpus |>
+    tm_map(removeNumbers) |>
+    tm_map(removePunctuation) |>
+    tm_map(stripWhitespace) 
+    
+  corpus <- tm_map(corpus, content_transformer(tolower)) 
+  corpus <- tm_map(corpus, removeWords, stopwords("english"))
+  
+  return (corpus)
+}
 
-q6_corpus
+# Corpus for all REASONS 
+q6_corpus = create_corpus(response$reason)
 
 
-# The number of real responses
+# Creating Corpus for OPINIONS & REASONS
+reason_list <- split(response, response$opinion)
+opinion_corpus_list <- list()
+
+
+# Corpuses for the REASONS, split per OPINION (1-5)
+opinion_1_corpus = create_corpus(reason_list[[1]]$reason)
+opinion_2_corpus = create_corpus(reason_list[[2]]$reason)
+opinion_3_corpus = create_corpus(reason_list[[3]]$reason)
+opinion_4_corpus = create_corpus(reason_list[[4]]$reason)
+opinion_5_corpus = create_corpus(reason_list[[5]]$reason)
+
+
+# Calculating the number of real responses
 post_length = nrow(response)
 yield = round(((post_length / pre_length) * 100), 3)
 
 
-
-response
 ```
 
 The data has `r pre_length` responses. The percentage of non-blank responses is `r yield` %
@@ -68,31 +97,38 @@ The data has `r pre_length` responses. The percentage of non-blank responses is 
 ```{r}
 #| label: q6-wordcloud
 
-# Creating word frequency matrix
+# This function generates a Word Cloud based from a corpus
+generate_wordcloud <- function(corpus) {
+  
+  dtm <- TermDocumentMatrix(corpus) 
+  matrix <- as.matrix(dtm) 
+  words <- sort(rowSums(matrix),decreasing=TRUE) 
+  wfm <- data.frame(word = names(words),freq=words)
+  
+  set.seed(1234) 
+  
+  wordcloud(words = wfm$word, 
+            freq = wfm$freq, 
+            min.freq = 1,           
+            max.words=200, 
+            random.order=FALSE, 
+            rot.per=0.35,            
+            colors=brewer.pal(8, "Dark2"))
 
-dtm <- TermDocumentMatrix(q6_corpus) 
-matrix <- as.matrix(dtm) 
-words <- sort(rowSums(matrix),decreasing=TRUE) 
-wfm <- data.frame(word = names(words),freq=words)
-
-#wfm
-
-# Creating word cloud
-
-set.seed(1234) 
-
-wordcloud(words = wfm$word, 
-          freq = wfm$freq, 
-          min.freq = 1,           
-          max.words=200, 
-          random.order=FALSE, 
-          rot.per=0.35,            
-          colors=brewer.pal(8, "Dark2"))
-
+}
 
 
+#generate_wordcloud(q6_corpus)
 
+generate_wordcloud(opinion_1_corpus)
 
+# compare difference in the frequency of words by opinion (1-5)
+
+```
+
+```{r}
+
+generate_wordcloud(opinion_5_corpus)
 ```
 
 Pending Sarah's feedback, here's what I'd like you to do this week to close out this task:
