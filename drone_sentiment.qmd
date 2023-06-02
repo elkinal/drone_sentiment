@@ -97,13 +97,22 @@ The data has `r pre_length` responses. The percentage of non-blank responses is 
 ```{r}
 #| label: q6-wordcloud
 
-# This function generates a Word Cloud based from a corpus
-generate_wordcloud <- function(corpus) {
-  
+
+
+# Returns a word-frequency matrix from a corpus
+get_wfm <- function(corpus) {
   dtm <- TermDocumentMatrix(corpus) 
   matrix <- as.matrix(dtm) 
   words <- sort(rowSums(matrix),decreasing=TRUE) 
   wfm <- data.frame(word = names(words),freq=words)
+  
+  return (wfm)
+}
+
+# Draws a Word Cloud based from a corpus
+generate_wordcloud <- function(corpus) {
+
+  wfm <- get_wfm(corpus)
   
   set.seed(1234) 
   
@@ -114,15 +123,94 @@ generate_wordcloud <- function(corpus) {
             random.order=FALSE, 
             rot.per=0.35,            
             colors=brewer.pal(8, "Dark2"))
-
 }
+
 
 
 #generate_wordcloud(q6_corpus)
 
 generate_wordcloud(opinion_1_corpus)
 
-# compare difference in the frequency of words by opinion (1-5)
+
+
+draw_wfm_diff_graph <- function(corpus_1, corpus_2) {
+    
+  
+  
+  opinion_1_wfm = get_wfm(corpus_1)
+  opinion_5_wfm = get_wfm(corpus_2)
+  
+  
+  opinion_1_wfm
+  opinion_5_wfm
+  
+  
+  
+  #ln 0 is undefined
+  
+  # adding negative sign
+  opinion_1_wfm <- opinion_1_wfm |>
+    mutate(freq = -freq)
+  
+  
+  # Calculating the relative frequencies
+  opinion_1_wfm <- opinion_1_wfm |>
+    mutate(ratio = freq / (nrow(opinion_1_wfm)))
+  
+  opinion_5_wfm <- opinion_5_wfm |>
+    mutate(ratio = freq / (nrow(opinion_5_wfm)))
+  
+  
+  
+  # Finding the difference in word frequencies
+  opinion_diff <- rbind(opinion_1_wfm, opinion_5_wfm)
+  opinion_diff <- opinion_diff |>
+    group_by(word) |>
+    summarize(diff_freq = sum(ratio)) |>
+    arrange(desc(diff_freq))
+  
+  
+  # HOW much more likely is 1 to use w than 5
+    # TOP 15 words used by 1 and 5
+  
+  # the difference in between the ratios
+  # logratio
+  
+  largest_diff <- rbind(head(opinion_diff, 15), tail(opinion_diff, 15))
+  
+  largest_diff
+  
+  largest_diff |>
+    ggplot(aes(reorder(word, -diff_freq, sum), diff_freq, fill = diff_freq < 0)) + 
+    geom_bar(stat="identity") +
+    
+    coord_flip() +
+  #  ylim(-0.04, 0.04)
+    
+    ylab("Difference in word frequency") +
+    xlab("Word") +
+    
+    ggtitle("Word frequency of drone export supporters / opposers") + 
+    
+    
+    scale_fill_manual(
+      values=c("#77dd76", "#f69185"),
+      name="Drone export\nopinion",
+                           breaks=c("FALSE", "TRUE"),
+                           labels=c("Support", "Oppose"))
+}
+
+
+draw_wfm_diff_graph(opinion_1_corpus, opinion_5_corpus)
+
+# WORDS represent the difference in the ratio of words that have been used.
+# for example, almost 0.04 , 4% of words used by suppoters is "good"
+
+#BETWEEN strongly agree and disagree, what about other options?
+
+# MAKE this into a function and do this BY country
+  
+  # ADD a neutral opinion?
 
 ```
 
