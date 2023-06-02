@@ -17,6 +17,8 @@ library(stringr)
 library(wordcloud)
 library(tm)
 library(janeaustenr)
+library(textstem)
+
 
 # For rendering
 library(rmarkdown)
@@ -36,10 +38,12 @@ pre_length = nrow(data1)
 response <- data1 |>
   select(Q6, Q8) |>
   rename(
-    reason = Q6,
-    opinion = Q8
+    reason = Q6, # text
+    opinion = Q8 # number
   )|>
-  mutate(opinion = gsub("(\n|<br />)"," ",opinion)) |>
+  mutate(reason = gsub("(\n|<br />)"," ",reason)) |> 
+  mutate(reason = gsub("'","",reason)) |>
+  mutate(reason = gsub("’","",reason)) |>
   drop_na() 
 
 # Removing first 2 rows
@@ -47,6 +51,14 @@ response = response[-c(1, 2),]
 
 # Reformatting opinion column
 response$opinion = as.numeric(response$opinion)
+
+# Lemmatize similar words
+#response <- response |>
+#  mutate(reason = noquote(lemmatize_words(c(reason)))) 
+
+response
+
+
 
 # Function turns a column into a corpus
 create_corpus <- function(column) {
@@ -84,6 +96,19 @@ opinion_3_corpus = create_corpus(reason_list[[3]]$reason)
 opinion_4_corpus = create_corpus(reason_list[[4]]$reason)
 opinion_5_corpus = create_corpus(reason_list[[5]]$reason)
 
+# Corpuses for the REASONS, split by GENERAL OPINION 
+# where 1,2 = oppose ~ 4, 5 = support
+
+#opinion_support = rbind(reason_list[[1]], reason_list[[2]])$reason
+#opinion_support
+
+opinion_support_corpus = create_corpus(
+  rbind(reason_list[[1]], reason_list[[2]])$reason
+)
+
+opinion_oppose_corpus = create_corpus(
+  rbind(reason_list[[4]], reason_list[[5]])$reason
+)
 
 # Calculating the number of real responses
 post_length = nrow(response)
@@ -201,7 +226,7 @@ draw_wfm_diff_graph <- function(corpus_1, corpus_2) {
 }
 
 
-draw_wfm_diff_graph(opinion_1_corpus, opinion_5_corpus)
+draw_wfm_diff_graph(opinion_support_corpus, opinion_oppose_corpus)
 
 # WORDS represent the difference in the ratio of words that have been used.
 # for example, almost 0.04 , 4% of words used by suppoters is "good"
@@ -210,7 +235,9 @@ draw_wfm_diff_graph(opinion_1_corpus, opinion_5_corpus)
 
 # MAKE this into a function and do this BY country
   
-  # ADD a neutral opinion?
+
+
+# COMBINE ALL SIMILAR WORDSwe
 
 ```
 
@@ -266,5 +293,12 @@ findAssocs(dtm, terms = "innocent", corlimit = 0.5)
 # The goal is to find out WHY people support certain viewpoints.
 # what are they motivated by -> what emotions does their text exhibit 
 # -> use emotion sentiment analysis library...? alternatives? need time.
+
+```
+
+```{r}
+
+lemmatize_words(c("dont", "don't"))
+gsub("’","","Because it’s a choice I pick the answer")
 
 ```
