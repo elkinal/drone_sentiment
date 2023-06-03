@@ -7,18 +7,18 @@ title: "Drone Sentiment Analysis"
 Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
 
 ```{r}
+#| label: libraries
 
 # Basic
 library(tidyverse)
 library(scales)
-library(stringr)
 
 # For cleaning / filtering text
+library(stringr)
 library(wordcloud)
 library(tm)
 library(janeaustenr)
 library(textstem)
-
 
 # For rendering
 library(rmarkdown)
@@ -27,14 +27,14 @@ library(stringr)
 ```
 
 ```{r}
-#| label: filtering
+#| label: tidying-data
 
 data1 <- read_csv("data/data1.csv")
  
 # The number of total responses
 pre_length = nrow(data1)
 
-# Filtering and cleaning
+# Filtering and cleaning responses
 response <- data1 |>
   select(Q6, Q8) |>
   rename(
@@ -52,15 +52,15 @@ response = response[-c(1, 2),]
 # Reformatting opinion column
 response$opinion = as.numeric(response$opinion)
 
-# Lemmatize similar words
-#response <- response |>
-#  mutate(reason = noquote(lemmatize_words(c(reason)))) 
+# Lemmatizing words - reducing them to base form
+lemmatize <- function(sentence) {
+  return(paste(lemmatize_words(strsplit(sentence, " ")[[1]]),
+        collapse=" "))
+}
+response[c("reason")] <- apply(response[c("reason")], 1,lemmatize)
 
-response
 
-
-
-# Function turns a column into a corpus
+# Function to turn a column into a corpus
 create_corpus <- function(column) {
   
   # Creating Corpus for ALL RAW REASONS
@@ -97,11 +97,10 @@ opinion_4_corpus = create_corpus(reason_list[[4]]$reason)
 opinion_5_corpus = create_corpus(reason_list[[5]]$reason)
 
 # Corpuses for the REASONS, split by GENERAL OPINION 
-# where 1,2 = oppose ~ 4, 5 = support
+# where scores of 1 or 2 = oppose & 4 or 5 = support
 
-#opinion_support = rbind(reason_list[[1]], reason_list[[2]])$reason
-#opinion_support
 
+# Creating corpuses for general support / opposition
 opinion_support_corpus = create_corpus(
   rbind(reason_list[[1]], reason_list[[2]])$reason
 )
@@ -120,9 +119,7 @@ yield = round(((post_length / pre_length) * 100), 3)
 The data has `r pre_length` responses. The percentage of non-blank responses is `r yield` %
 
 ```{r}
-#| label: q6-wordcloud
-
-
+#| label: word-ratio
 
 # Returns a word-frequency matrix from a corpus
 get_wfm <- function(corpus) {
@@ -133,29 +130,6 @@ get_wfm <- function(corpus) {
   
   return (wfm)
 }
-
-# Draws a Word Cloud based from a corpus
-generate_wordcloud <- function(corpus) {
-
-  wfm <- get_wfm(corpus)
-  
-  set.seed(1234) 
-  
-  wordcloud(words = wfm$word, 
-            freq = wfm$freq, 
-            min.freq = 1,           
-            max.words=200, 
-            random.order=FALSE, 
-            rot.per=0.35,            
-            colors=brewer.pal(8, "Dark2"))
-}
-
-
-
-#generate_wordcloud(q6_corpus)
-
-generate_wordcloud(opinion_1_corpus)
-
 
 
 draw_wfm_diff_graph <- function(corpus_1, corpus_2) {
@@ -195,11 +169,6 @@ draw_wfm_diff_graph <- function(corpus_1, corpus_2) {
     arrange(desc(diff_freq))
   
   
-  # HOW much more likely is 1 to use w than 5
-    # TOP 15 words used by 1 and 5
-  
-  # the difference in between the ratios
-  # logratio
   
   largest_diff <- rbind(head(opinion_diff, 15), tail(opinion_diff, 15))
   
@@ -209,8 +178,7 @@ draw_wfm_diff_graph <- function(corpus_1, corpus_2) {
     ggplot(aes(reorder(word, -diff_freq, sum), diff_freq, fill = diff_freq < 0)) + 
     geom_bar(stat="identity") +
     
-    coord_flip() +
-  #  ylim(-0.04, 0.04)
+    coord_flip() +  
     
     ylab("Difference in word frequency") +
     xlab("Word") +
@@ -241,64 +209,38 @@ draw_wfm_diff_graph(opinion_support_corpus, opinion_oppose_corpus)
 
 ```
 
-```{r}
+TODO: write a paragraph describing the findings here
 
+```{r}
+#| label: generate-wordcloud
+
+# Draws a Word Cloud based from a corpus
+generate_wordcloud <- function(corpus) {
+  wfm <- get_wfm(corpus)
+  wfm <- wfm[c(-1, -2),] # removing the words "drone" and "country"
+  set.seed(1234) 
+  wordcloud(words = wfm$word, 
+            freq = wfm$freq, 
+            min.freq = 1,           
+            max.words=200, 
+            random.order=FALSE, 
+            rot.per=0.35,            
+            colors=brewer.pal(8, "Dark2"))
+}
+```
+
+```{r}
+#| label: strong-support-wordcloud
+
+# Drawing worldcloud for STRONG OPPOSITION (1)
+generate_wordcloud(opinion_1_corpus)
+```
+
+```{r}
+#| label: strong-opposition-worldcloud
+
+# Drawing worldcloud for STRONG SUPPORT (5)
 generate_wordcloud(opinion_5_corpus)
 ```
 
-Pending Sarah's feedback, here's what I'd like you to do this week to close out this task:
-
-     - First, send me an image of the WordCloud for word frequency; I cannot view it presently.
-
-     - Second, complete positive and negative sentiment on drone exports, and by country.
-
-     - Third, build a table or figure that presents key findings by support, positive and negative sentiment, and by country. For example, columns could be the dv - support, +/- sentiment, country - and rows could be word associations at prescribed corlimits. BTW, why did you choose the corlimits you did?
-
      - Fourth, write two paragraphs, one on the sentiment analysis method and one on the key findings, integrating results by support, positive and negative sentiment, and by country. 
-
-```{r}
-#| label: sentiment
-
-# http://www.sthda.com/english/wiki/text-mining-and-word-cloud-fundamentals-in-r-5-simple-steps-you-should-know
-
-# https://uc-r.github.io/sentiment_analysis
-
-#wfm
-
-# TODO:
-
-# Wordcloud by support
-# q8 To what extent do you agree that U.S. officials have a moral obligation to sell U.S.-manufactured drones to allies and partners?
-
-
-
-
-# Words associated with "Ukraine"
-findAssocs(dtm, terms = "ukraine", corlimit = 0.18)
-
-# Words associaed with "support"
-findAssocs(dtm, terms = "support", corlimit = 0.14)
-
-# Words associaed with "drone"
-findAssocs(dtm, terms = "drone", corlimit = 0.2)
-
-# Words associaed with "innocent"
-findAssocs(dtm, terms = "innocent", corlimit = 0.5)
-
-
-
-
-
-
-# The goal is to find out WHY people support certain viewpoints.
-# what are they motivated by -> what emotions does their text exhibit 
-# -> use emotion sentiment analysis library...? alternatives? need time.
-
-```
-
-```{r}
-
-lemmatize_words(c("dont", "don't"))
-gsub("’","","Because it’s a choice I pick the answer")
-
-```
