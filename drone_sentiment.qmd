@@ -1,5 +1,9 @@
 ---
 title: "Drone Sentiment Analysis"
+format: pdf
+editor: visual
+fig-width: 6
+fig-height: 5
 ---
 
 ## Quarto
@@ -12,6 +16,7 @@ Quarto enables you to weave together content and executable code into a finished
 # Basic
 library(tidyverse)
 library(scales)
+library(knitr)
 
 # For cleaning / filtering text
 library(stringr)
@@ -19,6 +24,8 @@ library(wordcloud)
 library(tm)
 library(janeaustenr)
 library(textstem)
+library(syuzhet)
+library(sentimentr)
 
 # For rendering
 library(rmarkdown)
@@ -45,6 +52,8 @@ response <- data1 |>
   mutate(reason = gsub("'","",reason)) |>
   mutate(reason = gsub("’","",reason)) |>
   drop_na() 
+  
+
 
 # Removing first 2 rows
 response = response[-c(1, 2),]
@@ -59,6 +68,10 @@ lemmatize <- function(sentence) {
 }
 response[c("reason")] <- apply(response[c("reason")], 1,lemmatize)
 
+
+# Adding sentence-level sentiments to each response
+#response |>
+#  mutate(sentiment = sentiment(reason)$sentiment) 
 
 # Function to turn a column into a corpus
 create_corpus <- function(column) {
@@ -113,7 +126,6 @@ opinion_oppose_corpus = create_corpus(
 post_length = nrow(response)
 yield = round(((post_length / pre_length) * 100), 3)
 
-
 ```
 
 The data has `r pre_length` responses. The percentage of non-blank responses is `r yield` %
@@ -133,7 +145,7 @@ get_wfm <- function(corpus) {
 
 
 # Draws the word-frequency graph between 2 corpuses
-draw_wfm_diff_graph <- function(corpus_1, corpus_2) {
+draw_wfm_diff_graph <- function(corpus_1, corpus_2, n_width, p_width) {
   
   # Creating word-frequency matrix
   opinion_1_wfm = get_wfm(corpus_1)
@@ -158,7 +170,7 @@ draw_wfm_diff_graph <- function(corpus_1, corpus_2) {
     arrange(desc(diff_freq))
   
   # Joining the most significant words
-  largest_diff <- rbind(head(opinion_diff, 15), tail(opinion_diff, 15))
+  largest_diff <- rbind(head(opinion_diff, p_width), tail(opinion_diff, n_width))
   
   
   # Drawing the grap
@@ -185,15 +197,28 @@ draw_wfm_diff_graph <- function(corpus_1, corpus_2) {
     scale_y_continuous(labels = scales::percent_format(accuracy = 2)) 
 }
 
-draw_wfm_diff_graph(opinion_support_corpus, opinion_oppose_corpus)
-
-# WORDS represent the difference in the ratio of words that have been used.
-# for example, almost 0.04 , 4% of words used by suppoters is "good"
+draw_wfm_diff_graph(opinion_support_corpus, opinion_oppose_corpus, 15, 15)
 
 
 ```
 
-The difference in word frequency represents the percentage of
+The difference in word frequency represents the percentage of the difference between the words used. For example, "good" is featured 8% more frequently in supportive votes than in opposing ones. On the other hand, "war" and "weapon" are featured more frequently in opposing votes.
+
+The reason the word frequencies for supporters peak much more than for people opposing drone exports is because opposing viewpoints tended to use a greater variety of language, whereas drone export supporters mostly used the same words like "good", "country" and "ally".
+
+```{r}
+
+draw_wfm_diff_graph(opinion_support_corpus, opinion_oppose_corpus, 30, 0)
+```
+
+A closer analysis at the comments of the people opposing drone exports shows many of the factors people are concerned about.
+
+```{r}
+
+draw_wfm_diff_graph(opinion_support_corpus, opinion_oppose_corpus, 0, 30)
+```
+
+Similarly, looking at the comments by the people supporting drone exports reveals the reasoning behind their opinions.
 
 ```{r}
 #| label: generate-wordcloud
@@ -220,6 +245,8 @@ generate_wordcloud <- function(corpus) {
 generate_wordcloud(opinion_1_corpus)
 ```
 
+A word cloud of words used by people who voted (1), "Strongly Opposing" drone exports.
+
 ```{r}
 #| label: strong-opposition-worldcloud
 
@@ -227,4 +254,130 @@ generate_wordcloud(opinion_1_corpus)
 generate_wordcloud(opinion_5_corpus)
 ```
 
-     - Fourth, write two paragraphs, one on the sentiment analysis method and one on the key findings, integrating results by support, positive and negative sentiment, and by country. 
+A word cloud of words used by people who voted (5), "Strongly Supporting" drone exports.
+
+```{r}
+
+response
+
+#TODO: apply this globally, to the entire dataset, then look at the most negative and most positive sentences. 
+
+sentiment("hello there this is a cool sentence")$sentiment
+
+
+get_sentiment <- function(x) {
+  return (sentiment(x)$sentiment)
+}
+
+
+
+
+
+mini <- head(response, 5)
+mini
+
+
+
+#df <- data.frame(c("good","medium","bad"), c("ok","happy","win"))
+
+#df <- mini$reason
+#df
+
+#df[] <- lapply(df, get_sentiment)
+#df
+#as.data.frame(t(df))
+
+#cbind(mini, df)
+
+
+
+
+
+#vect = as.vector(head(response$reason, 10))
+#vect
+
+# turn column into vector, run sentiment on vector, turn vector into column, attach it...
+
+#stm = lapply(vect, FUN=sentiment, simplify=TRUE)
+#stm
+
+#length(stm)
+
+#com = rbind(stm[1], stm[2])
+#com
+
+#first = stm[1]
+
+#for (x in 2:length(stm)) {
+  #print(stm[x])
+  #append(stms, stm[x])
+#  first <- rbind(first, stm[x]$sentiment)
+#} 
+
+#stms
+#first
+
+#mini$sentiment <- sentiment(mini$reason)$sentiment 
+```
+
+```{r}
+bk <- response
+response <- head(response, 100)
+
+#length(response)
+
+get_sentiment <- function(x) {
+  return (sentiment(x)$sentiment)
+}
+
+#stm <- get_sentiment((head(response,1))$reason)
+#stm 
+#response |>
+    #DELETEME
+ # mutate(score = get_sentiment(reason)) 
+
+stm = list()
+
+for (x in 1:nrow(response)) {
+  rslt = get_sentiment((response$reason)[x])
+
+  print(rslt)
+  stm <- append(stm, list(rslt))
+} 
+
+df <- data.frame(unlist(stm)) 
+
+df
+
+new <- cbind(response, df)
+new
+
+#typeof(stm)
+#is.list(stm)
+
+```
+
+```{r}
+response
+
+statement <- c("I have a few thoughts about the MSBA Chicago program.", 
+               "I dislike programming in general.",
+               "However, I really do like R.",
+               "I do kind of love machine learning.")
+
+statement <- as.vector(response$reason)
+
+corpus <- tibble(document=1:nrow(response), text = statement)
+#corpus
+
+
+corpus <- corpus |>
+  get_sentences() |>
+  sentiment() |>
+  head(nrow(response)) |>
+  select(sentiment)
+
+corpus
+
+cbind(response, corpus)
+```
