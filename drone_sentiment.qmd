@@ -51,6 +51,9 @@ response <- data1 |>
   mutate(reason = gsub("(\n|<br />)"," ",reason)) |> 
   mutate(reason = gsub("'","",reason)) |>
   mutate(reason = gsub("’","",reason)) |>
+  mutate(reason = gsub(".","",reason, fixed = TRUE)) |> #prevent sentence splitting
+  mutate(reason = gsub("?","",reason, fixed = TRUE)) |> #prevent sentence splitting
+  mutate(reason = gsub("!","",reason, fixed = TRUE)) |> #prevent sentence splitting
   drop_na() 
   
 
@@ -126,6 +129,7 @@ opinion_oppose_corpus = create_corpus(
 post_length = nrow(response)
 yield = round(((post_length / pre_length) * 100), 3)
 
+#response
 ```
 
 The data has `r pre_length` responses. The percentage of non-blank responses is `r yield` %
@@ -257,119 +261,21 @@ generate_wordcloud(opinion_5_corpus)
 A word cloud of words used by people who voted (5), "Strongly Supporting" drone exports.
 
 ```{r}
-
-response
-
-#TODO: apply this globally, to the entire dataset, then look at the most negative and most positive sentences. 
-
-sentiment("hello there this is a cool sentence")$sentiment
+#| label: sentiments
 
 
 get_sentiment <- function(x) {
   return (sentiment(x)$sentiment)
 }
 
+get_sentiment("Economic benefit") #4
 
-
-
-
-mini <- head(response, 5)
-mini
-
-
-
-#df <- data.frame(c("good","medium","bad"), c("ok","happy","win"))
-
-#df <- mini$reason
-#df
-
-#df[] <- lapply(df, get_sentiment)
-#df
-#as.data.frame(t(df))
-
-#cbind(mini, df)
-
-
-
-
-
-#vect = as.vector(head(response$reason, 10))
-#vect
-
-# turn column into vector, run sentiment on vector, turn vector into column, attach it...
-
-#stm = lapply(vect, FUN=sentiment, simplify=TRUE)
-#stm
-
-#length(stm)
-
-#com = rbind(stm[1], stm[2])
-#com
-
-#first = stm[1]
-
-#for (x in 2:length(stm)) {
-  #print(stm[x])
-  #append(stms, stm[x])
-#  first <- rbind(first, stm[x]$sentiment)
-#} 
-
-#stms
-#first
-
-#mini$sentiment <- sentiment(mini$reason)$sentiment 
-```
-
-```{r}
-bk <- response
-response <- head(response, 100)
-
-#length(response)
-
-get_sentiment <- function(x) {
-  return (sentiment(x)$sentiment)
-}
-
-#stm <- get_sentiment((head(response,1))$reason)
-#stm 
-#response |>
-    #DELETEME
- # mutate(score = get_sentiment(reason)) 
-
-stm = list()
-
-for (x in 1:nrow(response)) {
-  rslt = get_sentiment((response$reason)[x])
-
-  print(rslt)
-  stm <- append(stm, list(rslt))
-} 
-
-df <- data.frame(unlist(stm)) 
-
-df
-
-new <- cbind(response, df)
-new
-
-#typeof(stm)
-#is.list(stm)
-
-```
-
-```{r}
 response
-
-statement <- c("I have a few thoughts about the MSBA Chicago program.", 
-               "I dislike programming in general.",
-               "However, I really do like R.",
-               "I do kind of love machine learning.")
 
 statement <- as.vector(response$reason)
 
 corpus <- tibble(document=1:nrow(response), text = statement)
-#corpus
-
+corpus
 
 corpus <- corpus |>
   get_sentences() |>
@@ -379,5 +285,57 @@ corpus <- corpus |>
 
 corpus
 
-cbind(response, corpus)
+df <- cbind(response, corpus)
+
+df 
+
+
+
+
+```
+
+```{r}
+
+df <- head(response, 1000)
+
+
+df 
+  #mutate(score = get_sentiment(reason))
+#for (x in 1:nrow(df)) {
+  #print(df$reason[x])
+  #print(get_sentiment(df$reason[x]))
+#  print(paste0(x, get_sentiment(df$reason[x])))
+#} 
+
+#vr = (get_sentiment(df$reason[31]))
+print("------")
+vr = sentiment(df$reason[775])
+typeof(vr)
+vr
+response$reason[775]
+
+
+get_sentiment("I do believe we should send any drone anywhere")
+get_sentiment("Its a privacy violation")
+
+# Basically the issue is that the sentence is split by punctuation. Remove all full stops to fix this.
+```
+
+```{r}
+
+score_responses <- response |>
+  mutate(score = get_sentiment(reason)) |>
+  arrange(score) 
+
+
+score_min_max = rbind(head(score_responses, 10), tail(score_responses, 10))
+score_min_max
+
+
+```
+
+```{r}
+
+gsub(".","","hello  . there. bro", fixed = TRUE)
+word("hello there bro", 1)
 ```
