@@ -297,28 +297,17 @@ prnt.test <- function(x){
 break_words <- function(startstring) {
   words = strsplit(startstring, ' ')[[1L]]
   splits = cut(seq_along(words), breaks = seq(0L, length(words) + 12L, by = 12L))
-  paste(lapply(split(words, splits), paste, collapse = ' '), collapse = ',')
-}
-
-# Function to print multiline text
-prnt_multi <- function(txt) {
-  
-  lst = strsplit(break_words(txt), split = ",", fixed = TRUE)
-  
-  for (x in 1:length(lst)) {
-    prnt.test(lst[[x]])
-  } 
+  paste(lapply(split(words, splits), paste, collapse = ' '), collapse = '\n')
 }
 
 # Prints everything with line breaks every 12 words.
 prnt_all_multi <- function(neg_lst) {
   for (x in 1:nrow(neg_lst)) {
     print(sprintf("[Response %s]", x))
-    prnt_multi(neg_lst$reason[[x]])  
+    writeLines(break_words(neg_lst$reason[[x]]))  
     writeLines("\n")
   }
 }
-
 
 ```
 
