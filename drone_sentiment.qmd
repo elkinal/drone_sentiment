@@ -6,9 +6,11 @@ fig-width: 6
 fig-height: 5
 ---
 
-## Quarto
+# Opinions about Drones, sentiment analysis
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
 
 ```{r}
 #| label: libraries
@@ -262,66 +264,7 @@ generate_wordcloud(opinion_5_corpus)
 
 A word cloud of words used by people who voted (5), "Strongly Supporting" drone exports.
 
-```{r}
-#| label: sentiments
-
-
-get_sentiment <- function(x) {
-  return (sentiment(x)$sentiment)
-}
-
-get_sentiment("Economic benefit") #4
-
-response
-
-statement <- as.vector(response$reason)
-
-corpus <- tibble(document=1:nrow(response), text = statement)
-corpus
-
-corpus <- corpus |>
-  get_sentences() |>
-  sentiment() |>
-  head(nrow(response)) |>
-  select(sentiment)
-
-corpus
-
-df <- cbind(response, corpus)
-
-df 
-
-
-
-
-```
-
-```{r}
-
-df <- head(response, 1000)
-
-
-df 
-  #mutate(score = get_sentiment(reason))
-#for (x in 1:nrow(df)) {
-  #print(df$reason[x])
-  #print(get_sentiment(df$reason[x]))
-#  print(paste0(x, get_sentiment(df$reason[x])))
-#} 
-
-#vr = (get_sentiment(df$reason[31]))
-print("------")
-vr = sentiment(df$reason[775])
-typeof(vr)
-vr
-response$reason[775]
-
-
-get_sentiment("I do believe we should send any drone anywhere")
-get_sentiment("Its a privacy violation")
-
-# Basically the issue is that the sentence is split by punctuation. Remove all full stops to fix this.
-```
+#### 10 Most Positive responses
 
 ```{r}
 
@@ -330,10 +273,69 @@ score_responses <- response |>
   arrange(score) 
 
 
-score_min_max = rbind(head(score_responses, 10), tail(score_responses, 10))
-score_min_max
-
-grid.table(score_min_max)
-
-# just format these as separate tibbles, print them out with an explanatory paragraph. Also mention that almost all of these responses are garbage.
+head(score_responses, 10) |>
+  select(reason, score)
 ```
+
+#### 10 Most Negative responses
+
+```{r}
+tail(score_responses, 10) |>
+  select(reason, score)
+```
+
+This shows the most positive and negative arguments for drone exports to foreign exports.
+
+```{r}
+
+# Adds line breaks to text
+prnt.test <- function(x){
+   cat(x, sep="\n\n")
+}
+
+# Adds comma flags to text
+break_words <- function(startstring) {
+  words = strsplit(startstring, ' ')[[1L]]
+  splits = cut(seq_along(words), breaks = seq(0L, length(words) + 12L, by = 12L))
+  paste(lapply(split(words, splits), paste, collapse = ' '), collapse = ',')
+}
+
+# Function to print multiline text
+prnt_multi <- function(txt) {
+  
+  lst = strsplit(break_words(txt), split = ",", fixed = TRUE)
+  
+  for (x in 1:length(lst)) {
+    prnt.test(lst[[x]])
+  } 
+}
+
+# Prints everything with line breaks every 12 words.
+prnt_all_multi <- function(neg_lst) {
+  for (x in 1:nrow(neg_lst)) {
+    print(sprintf("[Response %s]", x))
+    prnt_multi(neg_lst$reason[[x]])  
+    writeLines("\n")
+  }
+}
+
+
+```
+
+The full text for the 10 most **positive** responses is below.
+
+```{r}
+
+prnt_all_multi(neg_lst = tail(score_responses, 10) |>
+              select(reason))
+```
+
+Similarly, the 10 most **negative** responses are here:
+
+```{r}
+
+prnt_all_multi(neg_lst = head(score_responses, 10) |>
+              select(reason))
+```
+
+Note that these responses have grammatical issues because all the words have been reduced to their base form, and all their punctuation has been removed.
