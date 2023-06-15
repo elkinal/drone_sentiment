@@ -30,6 +30,8 @@ library(sentimentr)
 # For rendering
 library(rmarkdown)
 library(stringr)
+library(gridExtra)
+library(grid)
 
 ```
 
@@ -331,11 +333,7 @@ score_responses <- response |>
 score_min_max = rbind(head(score_responses, 10), tail(score_responses, 10))
 score_min_max
 
+grid.table(score_min_max)
 
-```
-
-```{r}
-
-gsub(".","","hello  . there. bro", fixed = TRUE)
-word("hello there bro", 1)
+# just format these as separate tibbles, print them out with an explanatory paragraph. Also mention that almost all of these responses are garbage.
 ```
